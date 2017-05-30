@@ -1,0 +1,8 @@
+/*
+From https://github.com/yjwen/org-reveal/issues/177
+*/
+
+.org-src-container {
+    overflow:auto;
+    height:700px;
+}

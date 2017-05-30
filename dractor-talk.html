@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Charming the Dell Lifecycle Controller with Python</title>
+<meta name="author" content="(John Hickey)"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="./reveal.js/css/reveal.css"/>
+
+<link rel="stylesheet" href="./reveal.js/css/theme/night.css" id="theme"/>
+
+<link rel="stylesheet" href="./local.css"/>
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = './reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide"><h1 class="title">Charming the Dell Lifecycle Controller with Python</h1><h2 class="author">John Hickey</h2><p class="date">Created: 2017-05-29 Mon 18:34</p>
+</section>
+
+<section>
+<section id="slide-orgheadline1">
+<h2 id="orgheadline1">Verizon Digital Media Services</h2>
+
+<div class="figure">
+<p><img src="https://images.verizondigitalmedia.com/2015/12/VDMS_NetworkMap_Update_May2017.png" alt="VDMS_NetworkMap_Update_May2017.png" />
+</p>
+</div>
+
+<aside class="notes">
+<p>
+So a little background about the problem that dractor is trying to solve.
+</p>
+
+<p>
+Verizon Digital Media Services is a content delivery network with a global presence.
+Milliseconds matter to us, so we numerous points of presence across the world.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline2">
+<h2 id="orgheadline2">The Cloud</h2>
+
+<div class="figure">
+<p><img src="./images/the_cloud.jpg" alt="the_cloud.jpg" />
+</p>
+</div>
+
+<aside class="notes">
+<p>
+Because performance is important, we run on baremetal.
+</p>
+
+<p>
+Because we have our servers in many different datacenters across the globe,
+remote management is key to our operations.
+</p>
+
+<p>
+Because we have very large number of servers, intelligent automation is very
+important.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline3">
+<h2 id="orgheadline3">What exactly is an "iDRAC"</h2>
+
+<div class="figure">
+<p><img src="./images/sh7757_block_diagram.png" alt="sh7757_block_diagram.png" />
+</p>
+</div>
+
+<aside class="notes">
+<p>
+The iDRAC is a System on a Chip that runs embedded Linux.
+This chip has tendrils throughout the server.  It can read
+sensors, it provides the video card to the server so it is
+able to snoop the systems video console, it can control server
+power, and even present virtual USB devices such as a keyboard
+or CD ROM.
+</p>
+
+<p>
+Source for block diagram: <a href="https://supermicro.com/manuals/other/SMM_IPMI_User_Guide.pdf">https://supermicro.com/manuals/other/SMM_IPMI_User_Guide.pdf</a>
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline4">
+<h2 id="orgheadline4">Basically a computer inside a computer</h2>
+
+<div class="figure">
+<p><img src="./images/krang.jpg" alt="krang.jpg" />
+</p>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline5">
+<h2 id="orgheadline5">What is a "Lifecycle Controller"?</h2>
+<p>
+A service that runs on top of the iDRAC hardware
+</p>
+
+<ul>
+<li>Update firmware</li>
+
+<li>Configure RAID and BIOS</li>
+
+<li>Perform diagnostics</li>
+
+<li>Provide rich data about server configuration</li>
+
+</ul>
+
+<aside class="notes">
+<p>
+
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline6">
+<h2 id="orgheadline6">Lifecycle Controller API</h2>
+<p>
+Powering on a server
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-xml">&lt;s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+            xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+            xmlns:wsman="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd"&gt;
+  &lt;s:Header&gt;
+    &lt;wsa:Action s:mustUnderstand="true"&gt;
+      http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ComputerSystem/RequestStateChange
+    &lt;/wsa:Action&gt;
+    &lt;wsa:To s:mustUnderstand="true"&gt;
+      https://192.168.0.120:443/wsman
+    &lt;/wsa:To&gt;
+    &lt;wsman:ResourceURI s:mustUnderstand="true"&gt;
+      http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ComputerSystem
+    &lt;/wsman:ResourceURI&gt;
+    &lt;wsa:MessageID s:mustUnderstand="true"&gt;
+      uuid:062b91fd-e3f1-4a75-9075-9a96787752f7
+     &lt;/wsa:MessageID&gt;
+     &lt;wsa:ReplyTo&gt;
+       &lt;wsa:Address&gt;
+         http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous
+       &lt;/wsa:Address&gt;
+     &lt;/wsa:ReplyTo&gt;
+     &lt;wsman:SelectorSet&gt;
+       &lt;wsman:Selector wsman:Name="__cimnamespace"&gt;
+         root/dcim
+       &lt;/wsman:Selector&gt;
+       &lt;wsman:Selector wsman:Name="Name"&gt;
+         srv:system
+       &lt;/wsman:Selector&gt;
+       &lt;wsman:Selector wsman:Name="CreationClassName"&gt;
+         DCIM_ComputerSystem
+       &lt;/wsman:Selector&gt;
+     &lt;/wsman:SelectorSet&gt;
+   &lt;/s:Header&gt;
+   &lt;s:Body&gt;
+     &lt;ns0:RequestStateChange_INPUT xmlns:ns0="http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ComputerSystem"&gt;
+       &lt;ns0:RequestedState&gt;
+         2
+       &lt;/ns0:RequestedState&gt;
+     &lt;/ns0:RequestStateChange_INPUT&gt;
+   &lt;/s:Body&gt;
+&lt;/s:Envelope&gt;
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+The above XML is a request for a server to turn on.
+</p>
+
+<p>
+You can interact programmatically with the DRAC using Web Services Management, which is based on SOAP.
+This means two things.  Our API is actually pretty well defined in an object oriented style, but
+using XML can be cumbersome.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline7">
+<h2 id="orgheadline7">Higher level tools</h2>
+<p>
+Better than raw XML for turning on a server.
+</p>
+
+<div class="org-src-container">
+
+<pre  class="src src-shell">wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
+/1/cim-schema/2/root/dcim/DCIM_ComputerSystem?CreationClassName=
+"DCIM_ComputerSystem",Name="srv:system" -h 192.168.0.120 -P 443
+-u root -p calvin -c Dummy -y basic -V –v -k "RequestedState=2"
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+This is requesting a server to power on.
+</p>
+
+<p>
+There were some higher level tools, but for some operations
+</p>
+
+</aside>
+
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline8">
+<h2 id="orgheadline8">Dractor</h2>
+<div class="org-src-container">
+
+<pre  class="src src-python">from dractor.dcim import Client
+client = Client('192.168.0.120', 443, 'root', 'calvin')
+client.connect()
+client.DCIM_ComputerSystem.RequestStateChange(RequestedState='Enabled')
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+The goal of dractor was to abstract away as much of the SOAPiness as
+possible leaving just the object oriented style of the API.  Now
+powering on a computer becomes much more straight forward.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline9">
+<h2 id="orgheadline9">Documentation</h2>
+
+<div class="figure">
+<p><img src="./images/code_documentation.png" alt="code_documentation.png" />
+</p>
+</div>
+
+<aside class="notes">
+<p>
+With Dractor, we make the documentation available.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline10">
+<h2 id="orgheadline10">Querying for System Information</h2>
+<div class="org-src-container">
+
+<pre  class="src src-python">&gt;&gt;&gt; nic_inventory = client.DCIM_NICViewFactory.enumerate()
+
+&gt;&gt;&gt; nic_inventory.keys()
+dict_keys(['NIC.Embedded.1-1-1', 'NIC.Embedded.2-1-1'])
+
+&gt;&gt;&gt; print(nic_inventory['NIC.Embedded.1-1-1'].ProductName)
+Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+Here we are getting information on what type of NIC the first NIC in
+the system is.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline11">
+<h2 id="orgheadline11">Return Data Attributes</h2>
+
+<div class="figure">
+<p><img src="./images/nic_inventory.png" alt="nic_inventory.png" />
+</p>
+</div>
+
+<aside class="notes">
+<p>
+We get a ton of information back from the DRAC.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline12">
+<h2 id="orgheadline12">Return Data Docstrings</h2>
+<div class="org-src-container">
+
+<pre  class="src src-text">Help on DCIM_NICView in module dractor.dcim.v2303030.DCIM_NICView object:
+
+class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
+ |  DCIM_NICView is a derivation of DCIM_View
+ |  with NIC specific data
+ |
+ |  Data descriptors defined here:
+ |
+ |  AutoNegotiation
+ |      Auto Negotiated.
+ |
+ |  BusNumber
+ |      The bus number where this PCI device resides
+ |
+ |  ControllerBIOSVersion
+ |      Represents firmware version of Controller BIOS.
+ |
+ |  CurrentMACAddress
+ |      A string containing the Current MAC address
+ |      The principal unicast address used in
+ |      communication with the NIC. The MAC address
+ |      is formatted as twelve hexadecimal digits
+ |      (e.g., "010203040506"), with each pair
+ |      representing one of the six octets of the MAC address
+ |      in "canonical" bit order according to RFC 2469
+ |
+ |  DataBusWidth
+ |      Data-bus width of the NIC PCI device.
+ |
+ |  DeviceDescription
+ |      A string containing the friendly Fully Qualified Device Description
+ |      A property that describes the device and its location
+ |
+ |  DeviceNumber
+ |      The device number assigned to this PCI device for this bus.
+ |
+ |  EFIVersion
+ |      Represents firmware version of EFI.
+ |
+ |  FCoEOffloadMode
+ |      Represents if Fibre Channel over Ethernet personality is enabled
+ |      or disabled on current partition in a Converged Network Adaptor
+ |      device. FCoEOffloadMode has the following values: Enabled
+ |      or Disabled.
+ |
+ |  FCoEWWNN
+ |      Fiber Channel over Ethernet World Wide Node Name.
+</pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline13">
+<h2 id="orgheadline13">Exceptions</h2>
+<div class="org-src-container">
+
+<pre  class="src src-python">ERROR:dractor.dcim.base:Expected ['0', '4096'], got 2: SYS021: The command failed to set RequestedState
+Traceback (most recent call last):
+  File "./d.py", line 10, in &lt;module&gt;
+    client.DCIM_ComputerSystem.RequestStateChange(RequestedState="Enabled")
+  File "/home/omen/Software/Personal/dractor/dractor/dcim/v2303030/DCIM_ComputerSystem.py", line 175, in RequestStateChange
+    return self._invoke_method("RequestStateChange", parameters)
+  File "/home/omen/Software/Personal/dractor/dractor/dcim/base.py", line 317, in _invoke_method
+    self._assert_return_value(result, [0, 4096])
+  File "/home/omen/Software/Personal/dractor/dractor/dcim/base.py", line 261, in _assert_return_value
+    raise DCIMCommandError(return_value, message_id, message)
+dractor.exceptions.DCIMCommandError: ('2', 'SYS021', 'The command failed to set RequestedState')
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+Powering on a server that is already powered on.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline14">
+<h2 id="orgheadline14">Dractor Recipes</h2>
+<ul>
+<li>Recipes are high level examples of dractor usage</li>
+
+<li>Smart configuration decisions in software</li>
+
+<li>Server error detection and handling</li>
+
+</ul>
+
+<aside class="notes">
+<p>
+The smart configuration decisions is a big one.  For example, we are able to pick a RAID configuration
+based on the physical drives present in the server.  We can also tell if a server has a hardware health
+issue or if it is stuck at a BIOS prompt.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline15">
+<h2 id="orgheadline15">Dractor: Implementation Details</h2>
+
+<div class="figure">
+<p><img src="./images/delorean.jpg" alt="delorean.jpg" />
+</p>
+</div>
+
+<aside class="notes">
+<p>
+None of these doc strings or attributes were manually typed in.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline16">
+<h2 id="orgheadline16">Managed Object Format</h2>
+<div class="org-src-container">
+
+<pre  class="src src-c">    [Description(
+        "") ]
+class DCIM_ComputerSystem : CIM_ComputerSystem {
+
+    [Override ("RequestStateChange"), Description ("Requests that the state of the element be "
+        "changed to the value specified in the RequestedState "
+        "parameter.") ]
+    uint32 RequestStateChange (
+        [IN, Description ( "The power state for ManagedElement." ),
+             ValueMap { "2", "3", "11" },
+             Values { "Enabled", "Disabled", "Reset" }]
+        uint16 RequestedState,
+
+        [IN ( false ), OUT, Description (
+             "Reference to the job (can be null if the task is completed)."
+              )]
+        CIM_ConcreteJob REF Job,
+
+        [IN, Description (
+             "A timeout period that specifies the maximum amount "
+             "of time that the client expects the transition to "
+             "the new state to take. The interval format must be "
+             "used to specify the TimeoutPeriod. A value of 0 or "
+             "a null parameter indicates that the client has no "
+             "time requirements for the transition. \n"
+             "If this property does not contain 0 or null and "
+             "the implementation does not support this "
+             "parameter, a return code of \'Use Of Timeout "
+             "Parameter Not Supported\' must be returned." )]
+        datetime TimeoutPeriod,
+
+        [OUT, Description (
+             "Error MessageID is returned if the method fails "
+             "to execute." )]
+        string MessageID,
+
+        [OUT, Description (
+             "Error Message in english corresponding to the "
+             "MessageID" )]
+        string Message,
+
+        [OUT, Description (
+             "Any dynamic string substitutions for the Message" )]
+        string MessageArguments[]
+    );
+};
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+Dell provides a set of Managed Object Format files (MOF) with
+every DRAC relase.  These MOF files provide us with enough information
+to automatically construct an interface to the Lifecycle Controller
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline17">
+<h2 id="orgheadline17">Handling MOF files</h2>
+<div class="org-src-container">
+
+<pre  class="src src-c">// DCIM MOF parsing
+root:
+    MOFClass
+;
+
+MOFClass:
+    ('[' qualifiers+=QualifierTypes[','] ']')?
+    'class' name=ID (':' parent_class=ID)? '{'
+        members*=Function
+    '};'
+;
+
+Function:
+    ('[' qualifiers+=QualifierTypes[','] ']')?
+    return_type=ID ('REF')? name=/\w+(\[\])?/
+    ('(' arguments+=FunctionArg[','] ')')?
+    ('=' default=/\w+/)?
+    ';'
+;
+
+FunctionArg:
+    ('[' qualifiers+=QualifierTypes[','] ']')?
+    ctype=ID ('REF')? name=/\w+(\[\])?/
+;
+
+QualifierTypes:
+    (StringArg | IntArg | List | NegativeKeyword | Keyword)
+;
+
+StringArg:
+    name=ID '(' values+=STRING ')'
+;
+
+// For MaxLen, etc
+IntArg:
+    name=ID '(' value=INT ')'
+;
+
+// Lists used by mappings
+List:
+    name=ID '{' values+=STRING[','] '}'
+;
+
+NegativeKeyword:
+    name=ID '(' 'false' ')'
+;
+
+Keyword:
+    name=ID
+;
+
+// Base
+Comment:
+  /\/\/.*$/
+;
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+It turns out that writing a grammar to parse MOF files is not terrible.
+We a tool called textX to do the parsing.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline18">
+<h2 id="orgheadline18">Metamodel</h2>
+<div class="org-src-container">
+
+<pre  class="src src-python">class MOFClass(Qualified):
+    """ MOF Class """
+
+    def __init__(self, name, qualifiers, parent_class, members):
+        """
+        Our MOF classes consist of members, which are functions, and
+        qualifiers
+        """
+
+        self.parent_class = parent_class
+        self.members = members
+
+        super(MOFClass, self).__init__(name, qualifiers)
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+We use some custom metamodel classes with textX.  Basically, textX will
+use these classes to instantiate, if defined, the objects in the grammar.
+For example here, you can compare MOFClass with the MOFClass in the grammar
+in the slide before.
+</p>
+
+<p>
+They contain the primary MOF to Python logic.  These classes expose properties
+that massage the information from the parsed MOF file in a way that makes
+writing templates easy.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline19">
+<h2 id="orgheadline19">Templates</h2>
+<div class="org-src-container">
+
+<pre  class="src src-jinja2"># pylint: disable=no-name-in-module
+from dractor.dcim.base import {{  mof_class.dcim_parents|join(", ") }}
+{% if mof_class.attributes %}
+from dractor.dcim.base import DCIMFactory
+{% endif %}
+
+class {{ mof_class.name }}({{ mof_class.dcim_parents|join(", ") }}):
+    """
+    {{ mof_class.docstring|indent(width=4, indentfirst=False) }}
+    """
+
+    .....
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+Dractor provides common functionality in a set of base classes.  These classes
+provide generic ways to perform varions WSMan functions.  They assemble the SOAP
+envelopes and parse the return envelopes from the DRAC.
+</p>
+
+<p>
+These base classes make it fairly simple to take the parse tree from a MOF file and
+write it out as Python code.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline20">
+<h2 id="orgheadline20">Auto-generated code</h2>
+<div class="org-src-container">
+
+<pre  class="src src-python">from dractor.dcim.base import DCIMMethodObject
+
+class DCIM_ComputerSystem(DCIMMethodObject):
+    """
+
+    """
+
+
+    def RequestStateChange(self, RequestedState=None, TimeoutPeriod=None):
+        """
+        Requests that the state of the element be
+        changed to the value specified in the RequestedState
+        parameter.
+
+        Args:
+                RequestedState (int):
+                    From the Dell MOF description::
+
+                        The power state for ManagedElement.
+
+                    Value Mappings::
+
+                                                        '11' &lt;-&gt; 'Reset'
+                                                        '2' &lt;-&gt; 'Enabled'
+                                                        '3' &lt;-&gt; 'Disabled'
+
+                TimeoutPeriod (datetime):
+                    From the Dell MOF description::
+
+                        A timeout period that specifies the maximum amount
+                        of time that the client expects the transition to
+                        the new state to take. The interval format must be
+                        used to specify the TimeoutPeriod. A value of 0 or
+                        a null parameter indicates that the client has no
+                        time requirements for the transition. \n
+                        If this property does not contain 0 or null and
+                        the implementation does not support this
+                        parameter, a return code of 'Use Of Timeout
+                        Parameter Not Supported' must be returned.
+
+
+        Returns:
+            dict:
+                A dictionary possibly containing these keys:
+
+                **Job** (*CIM_ConcreteJob*)
+                    From the Dell MOF description::
+
+                        Reference to the job (can be null if the task is completed).
+
+                **MessageID** (*string*)
+                    From the Dell MOF description::
+
+                        Error MessageID is returned if the method fails
+                            to execute.
+
+                **Message** (*string*)
+                    From the Dell MOF description::
+
+                        Error Message in english corresponding to the
+                            MessageID
+
+                **MessageArguments** (*list of string*)
+                    From the Dell MOF description::
+
+                        Any dynamic string substitutions for the Message
+                                            """
+
+        # It looks like a bit of a waste to set all these qualifiers here, but it looks better than a
+        # giant class level dictionary
+        parameters = defaultdict(dict)
+        parameters['valuemap'] = {}
+        parameters['qualifiers'] = {'override': ['RequestStateChange'], 'description': ['Requests that the state of the element be ', 'changed to the value specified in the RequestedState ', 'parameter.']}
+        parameters['input']['RequestedState'] = {}
+        parameters['input']['RequestedState']['value'] = RequestedState
+        parameters['input']['RequestedState']['qualifiers'] = {'description': ['The power state for ManagedElement.'],
+             'in': True,
+             'valuemap': ['2', '3', '11'],
+             'values': ['Enabled', 'Disabled', 'Reset']}
+        parameters['input']['RequestedState']['valuemap'] = {'11': 'Reset', '2': 'Enabled', '3': 'Disabled'}
+        parameters['input']['TimeoutPeriod'] = {}
+        parameters['input']['TimeoutPeriod']['value'] = TimeoutPeriod
+        parameters['input']['TimeoutPeriod']['qualifiers'] = {'description': ['A timeout period that specifies the maximum amount ',
+                             'of time that the client expects the transition to ',
+                             'the new state to take. The interval format must be ',
+                             'used to specify the TimeoutPeriod. A value of 0 or ',
+                             'a null parameter indicates that the client has no ',
+                             'time requirements for the transition. \\n',
+                             'If this property does not contain 0 or null and ',
+                             'the implementation does not support this ',
+                             "parameter, a return code of 'Use Of Timeout ",
+                             "Parameter Not Supported' must be returned."],
+             'in': True}
+        parameters['input']['TimeoutPeriod']['valuemap'] = {}
+        parameters['output']['Job'] = {}
+        parameters['output']['Job']['qualifiers'] = {'description': ['Reference to the job (can be null if the task is '
+                             'completed).'],
+             'in': False,
+             'out': True}
+        parameters['output']['Job']['valuemap'] = {}
+        parameters['output']['MessageID'] = {}
+        parameters['output']['MessageID']['qualifiers'] = {'description': ['Error MessageID is returned if the method fails ',
+                             'to execute.'],
+             'out': True}
+        parameters['output']['MessageID']['valuemap'] = {}
+        parameters['output']['Message'] = {}
+        parameters['output']['Message']['qualifiers'] = {'description': ['Error Message in english corresponding to the ', 'MessageID'],
+             'out': True}
+        parameters['output']['Message']['valuemap'] = {}
+        parameters['output']['MessageArguments'] = {}
+        parameters['output']['MessageArguments']['qualifiers'] = {'description': ['Any dynamic string substitutions for the Message'],
+             'out': True}
+        parameters['output']['MessageArguments']['valuemap'] = {}
+        # Return value for method is returned at 'ReturnValue'
+        parameters['output']['ReturnValue'] = {}
+        parameters['output']['ReturnValue']['qualifiers'] = {'override': ['RequestStateChange'], 'description': ['Requests that the state of the element be ', 'changed to the value specified in the RequestedState ', 'parameter.']}
+        parameters['output']['ReturnValue']['valuemap'] = {}
+
+        return self._invoke_method("RequestStateChange", parameters)
+</pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline21">
+<h2 id="orgheadline21">Conclusion</h2>
+<ul>
+<li>The object style API interface of the Lifecycle controller made it a natural fit for Python</li>
+
+<li>Parsing MOF files made things much more efficient</li>
+
+<li>Client libraries matter</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline22">
+<h2 id="orgheadline22">Links</h2>
+<p>
+<a href="https://github.com/VerizonDigital/dractor">https://github.com/VerizonDigital/dractor</a>
+</p>
+
+<p>
+<a href="https://github.com/igordejanovic/textX">textX meta-language</a>
+</p>
+</section>
+</section>
+</div>
+</div>
+<script src="./reveal.js/lib/js/head.min.js"></script>
+<script src="./reveal.js/js/reveal.js"></script>
+
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: true,
+progress: true,
+history: false,
+center: true,
+slideNumber: 'c',
+rollingLinks: false,
+keyboard: true,
+overview: true,
+width: 1200,
+height: 800,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'linear', // default/cube/page/concave/zoom/linear/fade/none
+transitionSpeed: 'default',
+multiplex: {
+    secret: '', // null if client
+    id: '', // id, obtained from socket.io server
+    url: '' // Location of socket.io server
+},
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+ { src: './reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+ { src: './reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: './reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: './reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+ { src: './reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }]
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,600 @@
+#+REVEAL_THEME: night
+#+REVEAL_ROOT: ./reveal.js
+#+REVEAL_TRANS: linear
+#+REVEAL_EXTRA_CSS: ./local.css
+#+OPTIONS: toc:nil num:nil
+#+OPTIONS: reveal_width:1200 reveal_height:800
+
+#+TITLE: Charming the Dell Lifecycle Controller with Python
+#+AUTHOR: John Hickey
+#+EMAIL: jjh-present daedalian us
+
+* Verizon Digital Media Services
+
+[[https://images.verizondigitalmedia.com/2015/12/VDMS_NetworkMap_Update_May2017.png]]
+
+#+BEGIN_NOTES
+So a little background about the problem that dractor is trying to solve.
+
+Verizon Digital Media Services is a content delivery network with a global presence.
+Milliseconds matter to us, so we numerous points of presence across the world.
+#+END_NOTES
+
+* The Cloud
+
+[[./images/the_cloud.jpg]]
+
+#+BEGIN_NOTES
+Because performance is important, we run on baremetal.
+
+Because we have our servers in many different datacenters across the globe,
+remote management is key to our operations.
+
+Because we have very large number of servers, intelligent automation is very
+important.
+#+END_NOTES
+
+* What exactly is an "iDRAC"
+
+[[./images/sh7757_block_diagram.png]]
+
+#+BEGIN_NOTES
+The iDRAC is a System on a Chip that runs embedded Linux.
+This chip has tendrils throughout the server.  It can read
+sensors, it provides the video card to the server so it is
+able to snoop the systems video console, it can control server
+power, and even present virtual USB devices such as a keyboard
+or CD ROM.
+
+Source for block diagram: https://supermicro.com/manuals/other/SMM_IPMI_User_Guide.pdf
+#+END_NOTES
+
+* Basically a computer inside a computer
+
+[[./images/krang.jpg]]
+
+* What is a "Lifecycle Controller"?
+
+A service that runs on top of the iDRAC hardware
+
+ * Update firmware
+
+ * Configure RAID and BIOS
+
+ * Perform diagnostics
+
+ * Provide rich data about server configuration
+
+#+BEGIN_NOTES
+
+#+END_NOTES
+
+* Lifecycle Controller API
+Powering on a server
+#+BEGIN_SRC xml
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+            xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+            xmlns:wsman="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd">
+  <s:Header>
+    <wsa:Action s:mustUnderstand="true">
+      http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ComputerSystem/RequestStateChange
+    </wsa:Action>
+    <wsa:To s:mustUnderstand="true">
+      https://192.168.0.120:443/wsman
+    </wsa:To>
+    <wsman:ResourceURI s:mustUnderstand="true">
+      http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ComputerSystem
+    </wsman:ResourceURI>
+    <wsa:MessageID s:mustUnderstand="true">
+      uuid:062b91fd-e3f1-4a75-9075-9a96787752f7
+     </wsa:MessageID>
+     <wsa:ReplyTo>
+       <wsa:Address>
+         http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous
+       </wsa:Address>
+     </wsa:ReplyTo>
+     <wsman:SelectorSet>
+       <wsman:Selector wsman:Name="__cimnamespace">
+         root/dcim
+       </wsman:Selector>
+       <wsman:Selector wsman:Name="Name">
+         srv:system
+       </wsman:Selector>
+       <wsman:Selector wsman:Name="CreationClassName">
+         DCIM_ComputerSystem
+       </wsman:Selector>
+     </wsman:SelectorSet>
+   </s:Header>
+   <s:Body>
+     <ns0:RequestStateChange_INPUT xmlns:ns0="http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ComputerSystem">
+       <ns0:RequestedState>
+         2
+       </ns0:RequestedState>
+     </ns0:RequestStateChange_INPUT>
+   </s:Body>
+</s:Envelope>
+#+END_SRC
+
+#+BEGIN_NOTES
+The above XML is a request for a server to turn on.
+
+You can interact programmatically with the DRAC using Web Services Management, which is based on SOAP.
+This means two things.  Our API is actually pretty well defined in an object oriented style, but
+using XML can be cumbersome.
+#+END_NOTES
+
+* Higher level tools
+
+Better than raw XML for turning on a server.
+
+#+BEGIN_SRC shell
+wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
+/1/cim-schema/2/root/dcim/DCIM_ComputerSystem?CreationClassName=
+"DCIM_ComputerSystem",Name="srv:system" -h 192.168.0.120 -P 443
+-u root -p calvin -c Dummy -y basic -V –v -k "RequestedState=2"
+#+END_SRC
+
+#+BEGIN_NOTES
+This is requesting a server to power on.
+
+There were some higher level tools, but for some operations
+#+END_NOTES
+
+
+* Dractor
+
+#+BEGIN_SRC python
+from dractor.dcim import Client
+client = Client('192.168.0.120', 443, 'root', 'calvin')
+client.connect()
+client.DCIM_ComputerSystem.RequestStateChange(RequestedState='Enabled')
+#+END_SRC
+
+#+BEGIN_NOTES
+The goal of dractor was to abstract away as much of the SOAPiness as
+possible leaving just the object oriented style of the API.  Now
+powering on a computer becomes much more straight forward.
+#+END_NOTES
+
+* Documentation
+
+[[./images/code_documentation.png]]
+
+#+BEGIN_NOTES
+With Dractor, we make the documentation available.
+#+END_NOTES
+
+* Querying for System Information
+
+#+BEGIN_SRC python
+>>> nic_inventory = client.DCIM_NICViewFactory.enumerate()
+
+>>> nic_inventory.keys()
+dict_keys(['NIC.Embedded.1-1-1', 'NIC.Embedded.2-1-1'])
+
+>>> print(nic_inventory['NIC.Embedded.1-1-1'].ProductName)
+Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
+
+#+END_SRC
+
+#+BEGIN_NOTES
+Here we are getting information on what type of NIC the first NIC in
+the system is.
+#+END_NOTES
+
+* Return Data Attributes
+
+[[./images/nic_inventory.png]]
+
+#+BEGIN_NOTES
+We get a ton of information back from the DRAC.
+#+END_NOTES
+
+* Return Data Docstrings
+
+#+BEGIN_SRC text
+Help on DCIM_NICView in module dractor.dcim.v2303030.DCIM_NICView object:
+
+class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
+ |  DCIM_NICView is a derivation of DCIM_View
+ |  with NIC specific data
+ |
+ |  Data descriptors defined here:
+ |
+ |  AutoNegotiation
+ |      Auto Negotiated.
+ |
+ |  BusNumber
+ |      The bus number where this PCI device resides
+ |
+ |  ControllerBIOSVersion
+ |      Represents firmware version of Controller BIOS.
+ |
+ |  CurrentMACAddress
+ |      A string containing the Current MAC address
+ |      The principal unicast address used in
+ |      communication with the NIC. The MAC address
+ |      is formatted as twelve hexadecimal digits
+ |      (e.g., "010203040506"), with each pair
+ |      representing one of the six octets of the MAC address
+ |      in "canonical" bit order according to RFC 2469
+ |
+ |  DataBusWidth
+ |      Data-bus width of the NIC PCI device.
+ |
+ |  DeviceDescription
+ |      A string containing the friendly Fully Qualified Device Description
+ |      A property that describes the device and its location
+ |
+ |  DeviceNumber
+ |      The device number assigned to this PCI device for this bus.
+ |
+ |  EFIVersion
+ |      Represents firmware version of EFI.
+ |
+ |  FCoEOffloadMode
+ |      Represents if Fibre Channel over Ethernet personality is enabled
+ |      or disabled on current partition in a Converged Network Adaptor
+ |      device. FCoEOffloadMode has the following values: Enabled
+ |      or Disabled.
+ |
+ |  FCoEWWNN
+ |      Fiber Channel over Ethernet World Wide Node Name.
+#+END_SRC
+
+* Exceptions
+
+#+BEGIN_SRC python
+ERROR:dractor.dcim.base:Expected ['0', '4096'], got 2: SYS021: The command failed to set RequestedState
+Traceback (most recent call last):
+  File "./d.py", line 10, in <module>
+    client.DCIM_ComputerSystem.RequestStateChange(RequestedState="Enabled")
+  File "/home/omen/Software/Personal/dractor/dractor/dcim/v2303030/DCIM_ComputerSystem.py", line 175, in RequestStateChange
+    return self._invoke_method("RequestStateChange", parameters)
+  File "/home/omen/Software/Personal/dractor/dractor/dcim/base.py", line 317, in _invoke_method
+    self._assert_return_value(result, [0, 4096])
+  File "/home/omen/Software/Personal/dractor/dractor/dcim/base.py", line 261, in _assert_return_value
+    raise DCIMCommandError(return_value, message_id, message)
+dractor.exceptions.DCIMCommandError: ('2', 'SYS021', 'The command failed to set RequestedState')
+#+END_SRC
+
+#+BEGIN_NOTES
+Powering on a server that is already powered on.
+#+END_NOTES
+
+* Dractor Recipes
+
+ * Recipes are high level examples of dractor usage
+
+ * Smart configuration decisions in software
+
+ * Server error detection and handling
+
+#+BEGIN_NOTES
+The smart configuration decisions is a big one.  For example, we are able to pick a RAID configuration
+based on the physical drives present in the server.  We can also tell if a server has a hardware health
+issue or if it is stuck at a BIOS prompt.
+#+END_NOTES
+
+* Dractor: Implementation Details
+
+[[./images/delorean.jpg]]
+
+#+BEGIN_NOTES
+None of these doc strings or attributes were manually typed in.
+#+END_NOTES
+
+* Managed Object Format
+
+#+BEGIN_SRC c
+    [Description(
+        "") ]
+class DCIM_ComputerSystem : CIM_ComputerSystem {
+
+    [Override ("RequestStateChange"), Description ("Requests that the state of the element be "
+        "changed to the value specified in the RequestedState "
+        "parameter.") ]
+    uint32 RequestStateChange (
+        [IN, Description ( "The power state for ManagedElement." ),
+             ValueMap { "2", "3", "11" },
+             Values { "Enabled", "Disabled", "Reset" }]
+        uint16 RequestedState,
+
+        [IN ( false ), OUT, Description (
+             "Reference to the job (can be null if the task is completed)."
+              )]
+        CIM_ConcreteJob REF Job,
+
+        [IN, Description (
+             "A timeout period that specifies the maximum amount "
+             "of time that the client expects the transition to "
+             "the new state to take. The interval format must be "
+             "used to specify the TimeoutPeriod. A value of 0 or "
+             "a null parameter indicates that the client has no "
+             "time requirements for the transition. \n"
+             "If this property does not contain 0 or null and "
+             "the implementation does not support this "
+             "parameter, a return code of \'Use Of Timeout "
+             "Parameter Not Supported\' must be returned." )]
+        datetime TimeoutPeriod,
+
+        [OUT, Description (
+             "Error MessageID is returned if the method fails "
+             "to execute." )]
+        string MessageID,
+
+        [OUT, Description (
+             "Error Message in english corresponding to the "
+             "MessageID" )]
+        string Message,
+
+        [OUT, Description (
+             "Any dynamic string substitutions for the Message" )]
+        string MessageArguments[]
+    );
+};
+#+END_SRC
+
+#+BEGIN_NOTES
+Dell provides a set of Managed Object Format files (MOF) with
+every DRAC relase.  These MOF files provide us with enough information
+to automatically construct an interface to the Lifecycle Controller
+#+END_NOTES
+
+* Handling MOF files
+
+#+BEGIN_SRC c
+// DCIM MOF parsing
+root:
+    MOFClass
+;
+
+MOFClass:
+    ('[' qualifiers+=QualifierTypes[','] ']')?
+    'class' name=ID (':' parent_class=ID)? '{'
+        members*=Function
+    '};'
+;
+
+Function:
+    ('[' qualifiers+=QualifierTypes[','] ']')?
+    return_type=ID ('REF')? name=/\w+(\[\])?/
+    ('(' arguments+=FunctionArg[','] ')')?
+    ('=' default=/\w+/)?
+    ';'
+;
+
+FunctionArg:
+    ('[' qualifiers+=QualifierTypes[','] ']')?
+    ctype=ID ('REF')? name=/\w+(\[\])?/
+;
+
+QualifierTypes:
+    (StringArg | IntArg | List | NegativeKeyword | Keyword)
+;
+
+StringArg:
+    name=ID '(' values+=STRING ')'
+;
+
+// For MaxLen, etc
+IntArg:
+    name=ID '(' value=INT ')'
+;
+
+// Lists used by mappings
+List:
+    name=ID '{' values+=STRING[','] '}'
+;
+
+NegativeKeyword:
+    name=ID '(' 'false' ')'
+;
+
+Keyword:
+    name=ID
+;
+
+// Base
+Comment:
+  /\/\/.*$/
+;
+#+END_SRC
+
+#+BEGIN_NOTES
+It turns out that writing a grammar to parse MOF files is not terrible.
+We a tool called textX to do the parsing.
+#+END_NOTES
+
+* Metamodel
+
+#+BEGIN_SRC python
+class MOFClass(Qualified):
+    """ MOF Class """
+
+    def __init__(self, name, qualifiers, parent_class, members):
+        """
+        Our MOF classes consist of members, which are functions, and
+        qualifiers
+        """
+
+        self.parent_class = parent_class
+        self.members = members
+
+        super(MOFClass, self).__init__(name, qualifiers)
+#+END_SRC
+
+#+BEGIN_NOTES
+We use some custom metamodel classes with textX.  Basically, textX will
+use these classes to instantiate, if defined, the objects in the grammar.
+For example here, you can compare MOFClass with the MOFClass in the grammar
+in the slide before.
+
+They contain the primary MOF to Python logic.  These classes expose properties
+that massage the information from the parsed MOF file in a way that makes
+writing templates easy.
+#+END_NOTES
+
+* Templates
+
+#+BEGIN_SRC jinja2
+# pylint: disable=no-name-in-module
+from dractor.dcim.base import {{  mof_class.dcim_parents|join(", ") }}
+{% if mof_class.attributes %}
+from dractor.dcim.base import DCIMFactory
+{% endif %}
+
+class {{ mof_class.name }}({{ mof_class.dcim_parents|join(", ") }}):
+    """
+    {{ mof_class.docstring|indent(width=4, indentfirst=False) }}
+    """
+
+    .....
+#+END_SRC
+
+#+BEGIN_NOTES
+Dractor provides common functionality in a set of base classes.  These classes
+provide generic ways to perform varions WSMan functions.  They assemble the SOAP
+envelopes and parse the return envelopes from the DRAC.
+
+These base classes make it fairly simple to take the parse tree from a MOF file and
+write it out as Python code.
+#+END_NOTES
+
+* Auto-generated code
+
+#+BEGIN_SRC python
+from dractor.dcim.base import DCIMMethodObject
+
+class DCIM_ComputerSystem(DCIMMethodObject):
+    """
+
+    """
+
+
+    def RequestStateChange(self, RequestedState=None, TimeoutPeriod=None):
+        """
+        Requests that the state of the element be
+        changed to the value specified in the RequestedState
+        parameter.
+
+        Args:
+                RequestedState (int):
+                    From the Dell MOF description::
+
+                        The power state for ManagedElement.
+
+                    Value Mappings::
+
+                                                        '11' <-> 'Reset'
+                                                        '2' <-> 'Enabled'
+                                                        '3' <-> 'Disabled'
+
+                TimeoutPeriod (datetime):
+                    From the Dell MOF description::
+
+                        A timeout period that specifies the maximum amount
+                        of time that the client expects the transition to
+                        the new state to take. The interval format must be
+                        used to specify the TimeoutPeriod. A value of 0 or
+                        a null parameter indicates that the client has no
+                        time requirements for the transition. \n
+                        If this property does not contain 0 or null and
+                        the implementation does not support this
+                        parameter, a return code of 'Use Of Timeout
+                        Parameter Not Supported' must be returned.
+
+
+        Returns:
+            dict:
+                A dictionary possibly containing these keys:
+
+                **Job** (*CIM_ConcreteJob*)
+                    From the Dell MOF description::
+
+                        Reference to the job (can be null if the task is completed).
+
+                **MessageID** (*string*)
+                    From the Dell MOF description::
+
+                        Error MessageID is returned if the method fails
+                            to execute.
+
+                **Message** (*string*)
+                    From the Dell MOF description::
+
+                        Error Message in english corresponding to the
+                            MessageID
+
+                **MessageArguments** (*list of string*)
+                    From the Dell MOF description::
+
+                        Any dynamic string substitutions for the Message
+                                            """
+
+        # It looks like a bit of a waste to set all these qualifiers here, but it looks better than a
+        # giant class level dictionary
+        parameters = defaultdict(dict)
+        parameters['valuemap'] = {}
+        parameters['qualifiers'] = {'override': ['RequestStateChange'], 'description': ['Requests that the state of the element be ', 'changed to the value specified in the RequestedState ', 'parameter.']}
+        parameters['input']['RequestedState'] = {}
+        parameters['input']['RequestedState']['value'] = RequestedState
+        parameters['input']['RequestedState']['qualifiers'] = {'description': ['The power state for ManagedElement.'],
+             'in': True,
+             'valuemap': ['2', '3', '11'],
+             'values': ['Enabled', 'Disabled', 'Reset']}
+        parameters['input']['RequestedState']['valuemap'] = {'11': 'Reset', '2': 'Enabled', '3': 'Disabled'}
+        parameters['input']['TimeoutPeriod'] = {}
+        parameters['input']['TimeoutPeriod']['value'] = TimeoutPeriod
+        parameters['input']['TimeoutPeriod']['qualifiers'] = {'description': ['A timeout period that specifies the maximum amount ',
+                             'of time that the client expects the transition to ',
+                             'the new state to take. The interval format must be ',
+                             'used to specify the TimeoutPeriod. A value of 0 or ',
+                             'a null parameter indicates that the client has no ',
+                             'time requirements for the transition. \\n',
+                             'If this property does not contain 0 or null and ',
+                             'the implementation does not support this ',
+                             "parameter, a return code of 'Use Of Timeout ",
+                             "Parameter Not Supported' must be returned."],
+             'in': True}
+        parameters['input']['TimeoutPeriod']['valuemap'] = {}
+        parameters['output']['Job'] = {}
+        parameters['output']['Job']['qualifiers'] = {'description': ['Reference to the job (can be null if the task is '
+                             'completed).'],
+             'in': False,
+             'out': True}
+        parameters['output']['Job']['valuemap'] = {}
+        parameters['output']['MessageID'] = {}
+        parameters['output']['MessageID']['qualifiers'] = {'description': ['Error MessageID is returned if the method fails ',
+                             'to execute.'],
+             'out': True}
+        parameters['output']['MessageID']['valuemap'] = {}
+        parameters['output']['Message'] = {}
+        parameters['output']['Message']['qualifiers'] = {'description': ['Error Message in english corresponding to the ', 'MessageID'],
+             'out': True}
+        parameters['output']['Message']['valuemap'] = {}
+        parameters['output']['MessageArguments'] = {}
+        parameters['output']['MessageArguments']['qualifiers'] = {'description': ['Any dynamic string substitutions for the Message'],
+             'out': True}
+        parameters['output']['MessageArguments']['valuemap'] = {}
+        # Return value for method is returned at 'ReturnValue'
+        parameters['output']['ReturnValue'] = {}
+        parameters['output']['ReturnValue']['qualifiers'] = {'override': ['RequestStateChange'], 'description': ['Requests that the state of the element be ', 'changed to the value specified in the RequestedState ', 'parameter.']}
+        parameters['output']['ReturnValue']['valuemap'] = {}
+
+        return self._invoke_method("RequestStateChange", parameters)
+#+END_SRC
+
+* Conclusion
+
+ * The object style API interface of the Lifecycle controller made it a natural fit for Python
+
+ * Parsing MOF files made things much more efficient
+
+ * Client libraries matter
+
+* Links
+
+[[https://github.com/VerizonDigital/dractor]]
+
+[[https://github.com/igordejanovic/textX][textX meta-language]]
