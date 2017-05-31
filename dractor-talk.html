@@ -27,12 +27,12 @@
 <body>
 <div class="reveal">
 <div class="slides">
-<section id="sec-title-slide"><h1 class="title">Charming the Dell Lifecycle Controller with Python</h1><h2 class="author">John Hickey</h2><p class="date">Created: 2017-05-30 Tue 16:56</p>
+<section id="sec-title-slide"><h1 class="title">Charming the Dell Lifecycle Controller with Python</h1><h2 class="author">John Hickey</h2><p class="date">Created: 2017-05-30 Tue 18:08</p>
 </section>
 
 <section>
-<section id="slide-orgce877af">
-<h2 id="orgce877af">Verizon Digital Media Services</h2>
+<section id="slide-org4194789">
+<h2 id="org4194789">Verizon Digital Media Services</h2>
 
 <div class="figure">
 <p><img src="https://images.verizondigitalmedia.com/2015/12/VDMS_NetworkMap_Update_May2017.png" alt="VDMS_NetworkMap_Update_May2017.png" />
@@ -40,22 +40,19 @@
 </div>
 
 <aside class="notes">
-<p>
-So a little background about the problem that dractor is trying to solve.
-</p>
+<ul>
+<li>Dractor was developed at VDMS</li>
+<li>What is VDMS? Read stats</li>
 
-<p>
-Verizon Digital Media Services is a content delivery network with a global presence.
-Milliseconds matter to us, so we numerous points of presence across the world.
-</p>
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org6d47f58">
-<h2 id="org6d47f58">The Cloud</h2>
+<section id="slide-org8d29a8b">
+<h2 id="org8d29a8b">The Cloud</h2>
 
 <div class="figure">
 <p><img src="./images/the_cloud.jpg" alt="the_cloud.jpg" />
@@ -63,27 +60,21 @@ Milliseconds matter to us, so we numerous points of presence across the world.
 </div>
 
 <aside class="notes">
-<p>
-Because performance is important, we run on baremetal.
-</p>
+<ul>
+<li>the cloud: Servers in a rack.</li>
+<li>We run on baremetal because performance</li>
+<li>Remote management is critical because we colocate in many datacenters</li>
+<li>Automation is critical because of the scale we operate at</li>
 
-<p>
-Because we have our servers in many different datacenters across the globe,
-remote management is key to our operations.
-</p>
-
-<p>
-Because we have very large number of servers, intelligent automation is very
-important.
-</p>
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org7df199e">
-<h2 id="org7df199e">What exactly is an "iDRAC"</h2>
+<section id="slide-orge7d778c">
+<h2 id="orge7d778c">What exactly is an "iDRAC"</h2>
 
 <div class="figure">
 <p><img src="./images/sh7757_block_diagram.png" alt="sh7757_block_diagram.png" />
@@ -91,14 +82,17 @@ important.
 </div>
 
 <aside class="notes">
-<p>
-The iDRAC is a System on a Chip that runs embedded Linux.
-This chip has tendrils throughout the server.  It can read
-sensors, it provides the video card to the server so it is
-able to snoop the systems video console, it can control server
-power, and even present virtual USB devices such as a keyboard
-or CD ROM.
-</p>
+<ul>
+<li>System on a Chip that runs Linux with own network conn.</li>
+<li>Tendrils throughout the server
+<ul>
+<li>Control Server Power</li>
+<li>Snoop display</li>
+<li>Present virtual USB input and storage devices</li>
+
+</ul></li>
+
+</ul>
 
 <p>
 Source for block diagram: <a href="https://supermicro.com/manuals/other/SMM_IPMI_User_Guide.pdf">https://supermicro.com/manuals/other/SMM_IPMI_User_Guide.pdf</a>
@@ -109,19 +103,26 @@ Source for block diagram: <a href="https://supermicro.com/manuals/other/SMM_IPMI
 </section>
 </section>
 <section>
-<section id="slide-org8158e7d">
-<h2 id="org8158e7d">Basically a computer inside a computer</h2>
+<section id="slide-orgb4dfefe">
+<h2 id="orgb4dfefe">Basically a computer inside a computer</h2>
 
 <div class="figure">
 <p><img src="./images/krang.jpg" alt="krang.jpg" />
 </p>
 </div>
 
+<aside class="notes">
+<p>
+The Drac is sort of like that bad guy from TMNT
+</p>
+
+</aside>
+
 </section>
 </section>
 <section>
-<section id="slide-orgfe31348">
-<h2 id="orgfe31348">What is a "Lifecycle Controller"?</h2>
+<section id="slide-org93bbbb4">
+<h2 id="org93bbbb4">What is a "Lifecycle Controller"?</h2>
 <p>
 A service that runs on top of the iDRAC hardware
 </p>
@@ -147,8 +148,8 @@ A service that runs on top of the iDRAC hardware
 </section>
 </section>
 <section>
-<section id="slide-orgcabf3b1">
-<h2 id="orgcabf3b1">Lifecycle Controller API</h2>
+<section id="slide-orge695cf6">
+<h2 id="orge695cf6">Lifecycle Controller API</h2>
 <div class="org-src-container">
 
 <pre><code class="html" >&lt;s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
@@ -196,27 +197,26 @@ A service that runs on top of the iDRAC hardware
 </div>
 
 <aside class="notes">
-<p>
-The above XML is a request for a server to turn on.
-</p>
+<ul>
+<li>XML to turn on server</li>
+<li>Lifecycle controller has a SOAP API that follows an object oriented sytle.
+<ul>
+<li>Calls are grouped into classes</li>
+<li>Information returned by the LC is also structured in a OO fashion</li>
 
-<p>
-You can interact programmatically with the DRAC using Web Services Management, which is based on SOAP.
-This means two things.  Our API is actually pretty well defined in an object oriented style, but
-using XML can be cumbersome.
-</p>
+</ul></li>
+<li>API allows full programmatic control over server settings (BIOS, RAID, firmware) and a
+wealth of information about the server (NIC Mac address, CPU type)</li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-orgdf20674">
-<h2 id="orgdf20674">Higher level tools</h2>
-<p>
-Better than raw XML for turning on a server.
-</p>
-
+<section id="slide-orgd4aaa1e">
+<h2 id="orgd4aaa1e">Higher level tools</h2>
 <div class="org-src-container">
 
 <pre><code class="shell" >wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
@@ -227,67 +227,46 @@ Better than raw XML for turning on a server.
 </div>
 
 <aside class="notes">
-<p>
-At least with this tool, we don't have to edit XML.  However, it is
-still necessary to provide a cumbersome URL.
-</p>
+<ul>
+<li>Better than raw XML for turning on a server.</li>
+<li>Can interact with the LC API without XML</li>
+<li>cumbersome URL to call DCIM<sub>ComputerSystem.RequestStateChange</sub>(RequestedState=2)</li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org2ee64d7">
-<h2 id="org2ee64d7">Dractor</h2>
+<section id="slide-org155558a">
+<h2 id="org155558a">Dractor</h2>
 <div class="org-src-container">
 
 <pre><code class="python" >from dractor.dcim import Client
+
 client = Client('192.168.0.120', 443, 'root', 'calvin')
 client.connect()
+
 client.DCIM_ComputerSystem.RequestStateChange(RequestedState='Enabled')
 </code></pre>
 </div>
 
 <aside class="notes">
-<p>
-The goal of dractor was to abstract away as much of the SOAPiness as
-possible leaving just the object oriented style of the API.  Now
-powering on a computer becomes much more straight forward.
-</p>
+<ul>
+<li>Abstract away having to know XML or URLs</li>
+<li>Present Object Oriented LC API as Python Objects</li>
+<li>Map to Python data-types (dict, Exception, etc)</li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org9e14421">
-<h2 id="org9e14421">Querying for System Information</h2>
-<div class="org-src-container">
-
-<pre><code class="python" >&gt;&gt;&gt; nic_inventory = client.DCIM_NICViewFactory.enumerate()
-
-&gt;&gt;&gt; nic_inventory.keys()
-dict_keys(['NIC.Embedded.1-1-1', 'NIC.Embedded.2-1-1'])
-
-&gt;&gt;&gt; print(nic_inventory['NIC.Embedded.1-1-1'].ProductName)
-Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
-
-</code></pre>
-</div>
-
-<aside class="notes">
-<p>
-Here we are getting information on what type of NIC the first NIC in
-the system is.
-</p>
-
-</aside>
-
-</section>
-</section>
-<section>
-<section id="slide-org9a249f4">
-<h2 id="org9a249f4">Documentation</h2>
+<section id="slide-org09480ff">
+<h2 id="org09480ff">Documentation</h2>
 
 <div class="figure">
 <p><img src="./images/code_documentation.png" alt="code_documentation.png" />
@@ -304,8 +283,36 @@ With Dractor, we make the documentation available.
 </section>
 </section>
 <section>
-<section id="slide-org8edb5a6">
-<h2 id="org8edb5a6">Return Data Attributes</h2>
+<section id="slide-orgdfac447">
+<h2 id="orgdfac447">Querying for System Information</h2>
+<div class="org-src-container">
+
+<pre><code class="python" >&gt;&gt;&gt; nic_inventory = client.DCIM_NICViewFactory.enumerate()
+
+&gt;&gt;&gt; nic_inventory.keys()
+dict_keys(['NIC.Embedded.1-1-1', 'NIC.Embedded.2-1-1'])
+
+&gt;&gt;&gt; print(nic_inventory['NIC.Embedded.1-1-1'].ProductName)
+Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
+
+</code></pre>
+</div>
+
+<aside class="notes">
+<ul>
+<li>The 'enumerate' call is a WSMan-ism for returning all objects of a
+particular type.  Dractor returns a dictionary of objects.</li>
+<li>We are getting the MAC of the first NIC on the system.</li>
+
+</ul>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-org438a0df">
+<h2 id="org438a0df">Return Data Properties</h2>
 
 <div class="figure">
 <p><img src="./images/nic_inventory.png" alt="nic_inventory.png" />
@@ -314,7 +321,8 @@ With Dractor, we make the documentation available.
 
 <aside class="notes">
 <p>
-We get a ton of information back from the DRAC.
+We get a ton of information back from the DRAC.  Dractor presents all
+the known fields as properties.
 </p>
 
 </aside>
@@ -322,8 +330,8 @@ We get a ton of information back from the DRAC.
 </section>
 </section>
 <section>
-<section id="slide-org9de74a3">
-<h2 id="org9de74a3">Return Data Docstrings</h2>
+<section id="slide-org76dc4b0">
+<h2 id="org76dc4b0">Return Data Docstrings</h2>
 <div class="org-src-container">
 
 <pre><code class="text" >Help on DCIM_NICView in module dractor.dcim.v2303030.DCIM_NICView object:
@@ -376,11 +384,20 @@ class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
 </code></pre>
 </div>
 
+<aside class="notes">
+<ul>
+<li>Here is the help for the DCIM<sub>NICView</sub> object.</li>
+<li>We also have rich docstrings for the Objects returned by the DRAC</li>
+
+</ul>
+
+</aside>
+
 </section>
 </section>
 <section>
-<section id="slide-orgf7c4df1">
-<h2 id="orgf7c4df1">Exceptions</h2>
+<section id="slide-org3e2d696">
+<h2 id="org3e2d696">Exceptions</h2>
 <div class="org-src-container">
 
 <pre><code class="python" >ERROR:dractor.dcim.base:Expected ['0', '4096'], got 2: SYS021: The command failed to set RequestedState
@@ -398,40 +415,84 @@ dractor.exceptions.DCIMCommandError: ('2', 'SYS021', 'The command failed to set 
 </div>
 
 <aside class="notes">
-<p>
-Powering on a server that is already powered on.
-</p>
+<ul>
+<li>Powering on a server that is already powered on results in an exception.</li>
+<li>This allows for high level remediation when scripting</li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-orgcc8c77e">
-<h2 id="orgcc8c77e">Dractor Recipes</h2>
+<section id="slide-org65d902a">
+<h2 id="org65d902a">Dractor Recipes are high level examples of dractor usage</h2>
 <ul>
-<li>Recipes are high level examples of dractor usage</li>
-
-<li>Smart configuration decisions in software</li>
+<li>Smart configuration decisions in software for BIOS and RAID</li>
 
 <li>Server error detection and handling</li>
 
 </ul>
 
 <aside class="notes">
-<p>
-The smart configuration decisions is a big one.  For example, we are able to pick a RAID configuration
-based on the physical drives present in the server.  We can also tell if a server has a hardware health
-issue or if it is stuck at a BIOS prompt.
-</p>
+<ul>
+<li>We are able to pick a RAID configuration based on the physical drives present in the server.</li>
+<li>We can  tell if a server has a hardware health issue or if it is stuck at a BIOS prompt.</li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org4c94f64">
-<h2 id="org4c94f64">Dractor: Implementation Details</h2>
+<section id="slide-org9bd2024">
+<h2 id="org9bd2024">Recipe Configuration</h2>
+<div class="org-src-container">
+
+<pre><code class="json" >"RAID1 for OS": {
+    "Description": "Create a RAID1 for the first two drives and make the third a spare",
+    "Selectors": {
+        "HardwareAttributes": {
+           "Disk.Bay.0": {
+                "Model": "INTEL SSDSC2BB12"
+           },
+           "Disk.Bay.1": {
+               "Model": "INTEL SSDSC2BB12"
+           }
+       }
+    },
+    "Settings": {
+        "Disk.Virtual.0": {
+           "Mode": "RAID1",
+           "SpanDepth": 1,
+           "SpanLength": 2,
+           "VirtualDiskName": "OS",
+            "PhysicalDiskIDs": [ "Disk.Bay.0", "Disk.Bay.1" ]
+        },
+        "Disk.Bay.2": {
+            "RaidStatus": "Spare"
+        }
+    }
+}
+</code></pre>
+</div>
+
+<aside class="notes">
+<ul>
+<li>Match on hardware leveraging LC data</li>
+<li>Configuration is now declaritive.  Does not dictate.</li>
+
+</ul>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-org75fcd42">
+<h2 id="org75fcd42">Dractor: Implementation Details</h2>
 
 <div class="figure">
 <p><img src="./images/delorean.jpg" alt="delorean.jpg" />
@@ -439,17 +500,18 @@ issue or if it is stuck at a BIOS prompt.
 </div>
 
 <aside class="notes">
-<p>
-None of these doc strings or attributes were manually typed in.
-</p>
+<ul>
+<li>Just a brief overview of one aspect of dractor</li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org15d7f48">
-<h2 id="org15d7f48">Managed Object Format</h2>
+<section id="slide-org730ce14">
+<h2 id="org730ce14">Managed Object Format</h2>
 <div class="org-src-container">
 
 <pre><code class="c" >    [Description(
@@ -502,29 +564,21 @@ class DCIM_ComputerSystem : CIM_ComputerSystem {
 </div>
 
 <aside class="notes">
-<p>
-Dell provides a set of Managed Object Format files (MOF) with
-every DRAC relase.
-</p>
+<ul>
+<li>Dell provides a set of Managed Object Format files</li>
+<li>MOF files define the methods supported by the LC</li>
+<li>Define "objects" returned when querying the LC API for information about the server.</li>
+<li>Notice that the MOF files provide a lot of metadata about the API, including our doc strings.</li>
 
-<p>
-These MOF files define the methods supported by the Lifecycle
-controller API as well as "objects" returned when querying the
-LC API for information about the server.
-</p>
-
-<p>
-Notice that the MOF files provide a lot of metadata about the
-API, including our doc strings.
-</p>
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-orgaaf1fcc">
-<h2 id="orgaaf1fcc">Handling MOF files</h2>
+<section id="slide-org201a239">
+<h2 id="org201a239">Handling MOF files</h2>
 <div class="org-src-container">
 
 <pre><code class="c" >// DCIM MOF parsing
@@ -597,8 +651,8 @@ come with textX made it easy to get started.
 </section>
 </section>
 <section>
-<section id="slide-orgc5fb302">
-<h2 id="orgc5fb302">Metamodel</h2>
+<section id="slide-org061f344">
+<h2 id="org061f344">Metamodel</h2>
 <div class="org-src-container">
 
 <pre><code class="python" >class MOFClass(Qualified):
@@ -620,30 +674,24 @@ come with textX made it easy to get started.
 </div>
 
 <aside class="notes">
-<p>
-We use some custom metamodel classes with textX.  Basically, textX will
-use these classes when instantiating the Abstract Syntax tree.
-</p>
+<ul>
+<li>Metamodel classes are used by textX to buid the Abstract Syntax Tree</li>
+<li>Note MOFClass &lt;-&gt; MOFClass</li>
+<li>We take the AST data and present properties that make templating easy.
+<ul>
+<li>MOF files sometimes contain names with a '[]'.  We strip that out at this level.</li>
 
-<p>
-MOFClass with the MOFClass in the grammar in the slide before maps to the
-MOFClass in this slide.
-</p>
+</ul></li>
 
-<p>
-We use these objects to define custom properties that take the raw data
-from the syntax tree and return it in a way that enables easy automatic
-code generations. For example, MOF files sometimes contain names with
-a '[]'.  We strip that out at this level.
-</p>
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org2a1c1e2">
-<h2 id="org2a1c1e2">Templates</h2>
+<section id="slide-org6e80735">
+<h2 id="org6e80735">Templates</h2>
 <div class="org-src-container">
 
 <pre><code class="jinja2" ># pylint: disable=no-name-in-module
@@ -662,24 +710,25 @@ class {{ mof_class.name }}({{ mof_class.dcim_parents|join(", ") }}):
 </div>
 
 <aside class="notes">
-<p>
-Dractor provides common functionality in a set of base classes.  These classes
-provide generic ways to perform varions WSMan functions.  They assemble the SOAP
-envelopes and parse the return envelopes from the DRAC.
-</p>
+<ul>
+<li>Dractor core functionality is implemented in base classes
+<ul>
+<li>They generic ways to interact with the LC API.</li>
+<li>Handle SOAP envelopes, parse return data, generate exceptions,</li>
+<li>This means that autogenerated code is mostly metadata plus a
+simple call at the end</li>
 
-<p>
-These base classes make it fairly simple to take the parse tree from a MOF file and
-write it out as Python code.
-</p>
+</ul></li>
+
+</ul>
 
 </aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org7be0079">
-<h2 id="org7be0079">Auto-generated code</h2>
+<section id="slide-org49e3500">
+<h2 id="org49e3500">Auto-generated code</h2>
 <div class="org-src-container">
 
 <pre><code class="python" >from dractor.dcim.base import DCIMMethodObject
@@ -803,21 +852,38 @@ class DCIM_ComputerSystem(DCIMMethodObject):
         return self._invoke_method("RequestStateChange", parameters)
 </code></pre>
 </div>
+<aside class="notes">
+<ul>
+<li>Example autogenerated class and call.</li>
+<li>Note that most of it is pure metadata with a call to _invoke<sub>method</sub> at the end</li>
+
+</ul>
+
+</aside>
 
 </section>
 </section>
 <section>
-<section id="slide-org4caee63">
-<h2 id="org4caee63">Demo</h2>
+<section id="slide-org234ee51">
+<h2 id="org234ee51">Demo</h2>
 <p>
-<a href="https://daedalian.us/~omen/dractor_skill.mp4">Dractor Alexa Skill</a>
+<a href="./videos/dractor_skill.mp4">Dractor Alexa Skill</a>
 </p>
 
+<aside class="notes">
+<ul>
+<li>Inspired by Kelsey Hightowers Keynote at PyCon</li>
+<li>Using voice control was a nice way to demonstrate the python glue</li>
+
+</ul>
+
+</aside>
+
 </section>
 </section>
 <section>
-<section id="slide-orge4ce4da">
-<h2 id="orge4ce4da">Conclusion</h2>
+<section id="slide-org26bf667">
+<h2 id="org26bf667">Conclusion</h2>
 <ul>
 <li>The object style API interface of the Lifecycle controller made it a natural fit for Python</li>
 
@@ -830,14 +896,18 @@ class DCIM_ComputerSystem(DCIMMethodObject):
 </section>
 </section>
 <section>
-<section id="slide-org45786e5">
-<h2 id="org45786e5">Links</h2>
+<section id="slide-org2c79a22">
+<h2 id="org2c79a22">Links</h2>
 <p>
-<a href="https://github.com/VerizonDigital/dractor">https://github.com/VerizonDigital/dractor</a>
+<a href="https://github.com/VerizonDigital/dractor">Dractor on GitHub</a>
 </p>
 
 <p>
 <a href="https://github.com/igordejanovic/textX">textX meta-language</a>
+</p>
+
+<p>
+<a href="//github.com/omenlabs/dractor-alexa-skill">Dractor Alexa Skill</a>
 </p>
 </section>
 </section>
@@ -876,7 +946,8 @@ multiplex: {
 
 // Optional libraries used to extend on reveal.js
 dependencies: [
- { src: './reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }]
+ { src: './reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+ { src: './reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }]
 });
 </script>
 </body>

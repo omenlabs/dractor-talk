@@ -6,7 +6,7 @@
 #+REVEAL_MIN_SCALE: .25
 #+REVEAL_MAX_SCALE: 1
 #+REVEAL_MARGIN: .1
-#+REVEAL_PLUGINS: (highlight)
+#+REVEAL_PLUGINS: (highlight notes)
 
 #+TITLE: Charming the Dell Lifecycle Controller with Python
 #+AUTHOR: John Hickey
@@ -17,10 +17,8 @@
 [[https://images.verizondigitalmedia.com/2015/12/VDMS_NetworkMap_Update_May2017.png]]
 
 #+BEGIN_NOTES
-So a little background about the problem that dractor is trying to solve.
-
-Verizon Digital Media Services is a content delivery network with a global presence.
-Milliseconds matter to us, so we numerous points of presence across the world.
+ * Dractor was developed at VDMS
+ * What is VDMS? Read stats
 #+END_NOTES
 
 * The Cloud
@@ -28,13 +26,10 @@ Milliseconds matter to us, so we numerous points of presence across the world.
 [[./images/the_cloud.jpg]]
 
 #+BEGIN_NOTES
-Because performance is important, we run on baremetal.
-
-Because we have our servers in many different datacenters across the globe,
-remote management is key to our operations.
-
-Because we have very large number of servers, intelligent automation is very
-important.
+ * the cloud: Servers in a rack.
+ * We run on baremetal because performance
+ * Remote management is critical because we colocate in many datacenters
+ * Automation is critical because of the scale we operate at
 #+END_NOTES
 
 * What exactly is an "iDRAC"
@@ -42,12 +37,11 @@ important.
 [[./images/sh7757_block_diagram.png]]
 
 #+BEGIN_NOTES
-The iDRAC is a System on a Chip that runs embedded Linux.
-This chip has tendrils throughout the server.  It can read
-sensors, it provides the video card to the server so it is
-able to snoop the systems video console, it can control server
-power, and even present virtual USB devices such as a keyboard
-or CD ROM.
+ * System on a Chip that runs Linux with own network conn.
+ * Tendrils throughout the server
+  * Control Server Power
+  * Snoop display
+  * Present virtual USB input and storage devices
 
 Source for block diagram: https://supermicro.com/manuals/other/SMM_IPMI_User_Guide.pdf
 #+END_NOTES
@@ -55,6 +49,10 @@ Source for block diagram: https://supermicro.com/manuals/other/SMM_IPMI_User_Gui
 * Basically a computer inside a computer
 
 [[./images/krang.jpg]]
+
+#+BEGIN_NOTES
+The Drac is sort of like that bad guy from TMNT
+#+END_NOTES
 
 * What is a "Lifecycle Controller"?
 
@@ -119,16 +117,15 @@ A service that runs on top of the iDRAC hardware
 #+END_SRC
 
 #+BEGIN_NOTES
-The above XML is a request for a server to turn on.
-
-You can interact programmatically with the DRAC using Web Services Management, which is based on SOAP.
-This means two things.  Our API is actually pretty well defined in an object oriented style, but
-using XML can be cumbersome.
+ * XML to turn on server
+ * Lifecycle controller has a SOAP API that follows an object oriented sytle.
+  * Calls are grouped into classes
+  * Information returned by the LC is also structured in a OO fashion
+ * API allows full programmatic control over server settings (BIOS, RAID, firmware) and a
+   wealth of information about the server (NIC Mac address, CPU type)
 #+END_NOTES
 
 * Higher level tools
-
-Better than raw XML for turning on a server.
 
 #+BEGIN_SRC shell
 wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
@@ -138,8 +135,9 @@ wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
 #+END_SRC
 
 #+BEGIN_NOTES
-At least with this tool, we don't have to edit XML.  However, it is
-still necessary to provide a cumbersome URL.
+ * Better than raw XML for turning on a server.
+ * Can interact with the LC API without XML
+ * cumbersome URL to call DCIM_ComputerSystem.RequestStateChange(RequestedState=2)
 #+END_NOTES
 
 * Dractor
@@ -154,9 +152,9 @@ client.DCIM_ComputerSystem.RequestStateChange(RequestedState='Enabled')
 #+END_SRC
 
 #+BEGIN_NOTES
-The goal of dractor was to abstract away as much of the SOAPiness as
-possible leaving just the object oriented style of the API.  Now
-powering on a computer becomes much more straight forward.
+ * Abstract away having to know XML or URLs
+ * Present Object Oriented LC API as Python Objects
+ * Map to Python data-types (dict, Exception, etc)
 #+END_NOTES
 
 * Documentation
@@ -181,11 +179,9 @@ Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
 #+END_SRC
 
 #+BEGIN_NOTES
-Here we are getting information on what type of NIC the first NIC in
-the system is.
-
-The 'enumerate' call is a WSMan-ism for returning all objects of a
-particular type.  Dractor returns a dictionary of objects.
+ * The 'enumerate' call is a WSMan-ism for returning all objects of a
+   particular type.  Dractor returns a dictionary of objects.
+ * We are getting the MAC of the first NIC on the system.
 #+END_NOTES
 
 * Return Data Properties
@@ -250,8 +246,8 @@ class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
 #+END_SRC
 
 #+BEGIN_NOTES
-We have a rich set of doc strings for the various return properties.
-Here is the help for the DCIM_NICView object.
+ * Here is the help for the DCIM_NICView object.
+ * We also have rich docstrings for the Objects returned by the DRAC
 #+END_NOTES
 
 * Exceptions
@@ -271,7 +267,8 @@ dractor.exceptions.DCIMCommandError: ('2', 'SYS021', 'The command failed to set 
 #+END_SRC
 
 #+BEGIN_NOTES
-Powering on a server that is already powered on.
+ * Powering on a server that is already powered on results in an exception.
+ * This allows for high level remediation when scripting
 #+END_NOTES
 
 * Dractor Recipes are high level examples of dractor usage
@@ -281,9 +278,43 @@ Powering on a server that is already powered on.
  * Server error detection and handling
 
 #+BEGIN_NOTES
-The smart configuration decisions is a big one.  For example, we are able to pick a RAID configuration
-based on the physical drives present in the server.  We can also tell if a server has a hardware health
-issue or if it is stuck at a BIOS prompt.
+ * We are able to pick a RAID configuration based on the physical drives present in the server.
+ * We can  tell if a server has a hardware health issue or if it is stuck at a BIOS prompt.
+#+END_NOTES
+
+* Recipe Configuration
+
+#+BEGIN_SRC json
+"RAID1 for OS": {
+    "Description": "Create a RAID1 for the first two drives and make the third a spare",
+    "Selectors": {
+        "HardwareAttributes": {
+           "Disk.Bay.0": {
+                "Model": "INTEL SSDSC2BB12"
+           },
+           "Disk.Bay.1": {
+               "Model": "INTEL SSDSC2BB12"
+           }
+       }
+    },
+    "Settings": {
+        "Disk.Virtual.0": {
+           "Mode": "RAID1",
+           "SpanDepth": 1,
+           "SpanLength": 2,
+           "VirtualDiskName": "OS",
+            "PhysicalDiskIDs": [ "Disk.Bay.0", "Disk.Bay.1" ]
+        },
+        "Disk.Bay.2": {
+            "RaidStatus": "Spare"
+        }
+    }
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+ * Match on hardware leveraging LC data
+ * Configuration is now declaritive.  Does not dictate.
 #+END_NOTES
 
 * Dractor: Implementation Details
@@ -291,7 +322,7 @@ issue or if it is stuck at a BIOS prompt.
 [[./images/delorean.jpg]]
 
 #+BEGIN_NOTES
-None of these doc strings or attributes were manually typed in.
+ * Just a brief overview of one aspect of dractor
 #+END_NOTES
 
 * Managed Object Format
@@ -346,15 +377,10 @@ class DCIM_ComputerSystem : CIM_ComputerSystem {
 #+END_SRC
 
 #+BEGIN_NOTES
-Dell provides a set of Managed Object Format files (MOF) with
-every DRAC relase.
-
-These MOF files define the methods supported by the Lifecycle
-controller API as well as "objects" returned when querying the
-LC API for information about the server.
-
-Notice that the MOF files provide a lot of metadata about the
-API, including our doc strings.
+ * Dell provides a set of Managed Object Format files
+ * MOF files define the methods supported by the LC
+ * Define "objects" returned when querying the LC API for information about the server.
+ * Notice that the MOF files provide a lot of metadata about the API, including our doc strings.
 #+END_NOTES
 
 * Handling MOF files
@@ -444,16 +470,10 @@ class MOFClass(Qualified):
 #+END_SRC
 
 #+BEGIN_NOTES
-We use some custom metamodel classes with textX.  Basically, textX will
-use these classes when instantiating the Abstract Syntax tree.
-
-MOFClass with the MOFClass in the grammar in the slide before maps to the
-MOFClass in this slide.
-
-We use these objects to define custom properties that take the raw data
-from the syntax tree and return it in a way that enables easy automatic
-code generations. For example, MOF files sometimes contain names with
-a '[]'.  We strip that out at this level.
+ * Metamodel classes are used by textX to buid the Abstract Syntax Tree
+ * Note MOFClass <-> MOFClass
+ * We take the AST data and present properties that make templating easy.
+  * MOF files sometimes contain names with a '[]'.  We strip that out at this level.
 #+END_NOTES
 
 * Templates
@@ -474,12 +494,11 @@ class {{ mof_class.name }}({{ mof_class.dcim_parents|join(", ") }}):
 #+END_SRC
 
 #+BEGIN_NOTES
-Dractor provides common functionality in a set of base classes.  These classes
-provide generic ways to perform varions WSMan functions.  They assemble the SOAP
-envelopes and parse the return envelopes from the DRAC.
-
-These base classes make it fairly simple to take the parse tree from a MOF file and
-write it out as Python code.
+ * Dractor core functionality is implemented in base classes
+  * They generic ways to interact with the LC API.
+  * Handle SOAP envelopes, parse return data, generate exceptions,
+  * This means that autogenerated code is mostly metadata plus a
+    simple call at the end
 #+END_NOTES
 
 * Auto-generated code
@@ -605,10 +624,19 @@ class DCIM_ComputerSystem(DCIMMethodObject):
 
         return self._invoke_method("RequestStateChange", parameters)
 #+END_SRC
+#+BEGIN_NOTES
+ * Example autogenerated class and call.
+ * Note that most of it is pure metadata with a call to _invoke_method at the end
+#+END_NOTES
 
 * Demo
 
-[[https://daedalian.us/~omen/dractor_skill.mp4][Dractor Alexa Skill]]
+[[./videos/dractor_skill.mp4][Dractor Alexa Skill]]
+
+#+BEGIN_NOTES
+ * Inspired by Kelsey Hightowers Keynote at PyCon
+ * Using voice control was a nice way to demonstrate the python glue
+#+END_NOTES
 
 * Conclusion
 
