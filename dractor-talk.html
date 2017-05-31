@@ -9,10 +9,10 @@
 </style>
 <link rel="stylesheet" href="./reveal.js/css/reveal.css"/>
 
-<link rel="stylesheet" href="./reveal.js/css/theme/night.css" id="theme"/>
+<link rel="stylesheet" href="./reveal.js/css/theme/moon.css" id="theme"/>
 
 <link rel="stylesheet" href="./local.css"/>
-
+<link rel="stylesheet" href="./reveal.js/lib/css/zenburn.css"/>
 <!-- If the query includes 'print-pdf', include the PDF print sheet -->
 <script>
     if( window.location.search.match( /print-pdf/gi ) ) {
@@ -27,12 +27,12 @@
 <body>
 <div class="reveal">
 <div class="slides">
-<section id="sec-title-slide"><h1 class="title">Charming the Dell Lifecycle Controller with Python</h1><h2 class="author">John Hickey</h2><p class="date">Created: 2017-05-29 Mon 18:34</p>
+<section id="sec-title-slide"><h1 class="title">Charming the Dell Lifecycle Controller with Python</h1><h2 class="author">John Hickey</h2><p class="date">Created: 2017-05-30 Tue 16:56</p>
 </section>
 
 <section>
-<section id="slide-orgheadline1">
-<h2 id="orgheadline1">Verizon Digital Media Services</h2>
+<section id="slide-orgce877af">
+<h2 id="orgce877af">Verizon Digital Media Services</h2>
 
 <div class="figure">
 <p><img src="https://images.verizondigitalmedia.com/2015/12/VDMS_NetworkMap_Update_May2017.png" alt="VDMS_NetworkMap_Update_May2017.png" />
@@ -54,8 +54,8 @@ Milliseconds matter to us, so we numerous points of presence across the world.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline2">
-<h2 id="orgheadline2">The Cloud</h2>
+<section id="slide-org6d47f58">
+<h2 id="org6d47f58">The Cloud</h2>
 
 <div class="figure">
 <p><img src="./images/the_cloud.jpg" alt="the_cloud.jpg" />
@@ -82,8 +82,8 @@ important.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline3">
-<h2 id="orgheadline3">What exactly is an "iDRAC"</h2>
+<section id="slide-org7df199e">
+<h2 id="org7df199e">What exactly is an "iDRAC"</h2>
 
 <div class="figure">
 <p><img src="./images/sh7757_block_diagram.png" alt="sh7757_block_diagram.png" />
@@ -109,8 +109,8 @@ Source for block diagram: <a href="https://supermicro.com/manuals/other/SMM_IPMI
 </section>
 </section>
 <section>
-<section id="slide-orgheadline4">
-<h2 id="orgheadline4">Basically a computer inside a computer</h2>
+<section id="slide-org8158e7d">
+<h2 id="org8158e7d">Basically a computer inside a computer</h2>
 
 <div class="figure">
 <p><img src="./images/krang.jpg" alt="krang.jpg" />
@@ -120,8 +120,8 @@ Source for block diagram: <a href="https://supermicro.com/manuals/other/SMM_IPMI
 </section>
 </section>
 <section>
-<section id="slide-orgheadline5">
-<h2 id="orgheadline5">What is a "Lifecycle Controller"?</h2>
+<section id="slide-orgfe31348">
+<h2 id="orgfe31348">What is a "Lifecycle Controller"?</h2>
 <p>
 A service that runs on top of the iDRAC hardware
 </p>
@@ -147,14 +147,11 @@ A service that runs on top of the iDRAC hardware
 </section>
 </section>
 <section>
-<section id="slide-orgheadline6">
-<h2 id="orgheadline6">Lifecycle Controller API</h2>
-<p>
-Powering on a server
-</p>
+<section id="slide-orgcabf3b1">
+<h2 id="orgcabf3b1">Lifecycle Controller API</h2>
 <div class="org-src-container">
 
-<pre  class="src src-xml">&lt;s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+<pre><code class="html" >&lt;s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
             xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
             xmlns:wsman="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd"&gt;
   &lt;s:Header&gt;
@@ -195,7 +192,7 @@ Powering on a server
      &lt;/ns0:RequestStateChange_INPUT&gt;
    &lt;/s:Body&gt;
 &lt;/s:Envelope&gt;
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
@@ -214,45 +211,41 @@ using XML can be cumbersome.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline7">
-<h2 id="orgheadline7">Higher level tools</h2>
+<section id="slide-orgdf20674">
+<h2 id="orgdf20674">Higher level tools</h2>
 <p>
 Better than raw XML for turning on a server.
 </p>
 
 <div class="org-src-container">
 
-<pre  class="src src-shell">wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
+<pre><code class="shell" >wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
 /1/cim-schema/2/root/dcim/DCIM_ComputerSystem?CreationClassName=
 "DCIM_ComputerSystem",Name="srv:system" -h 192.168.0.120 -P 443
 -u root -p calvin -c Dummy -y basic -V –v -k "RequestedState=2"
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
 <p>
-This is requesting a server to power on.
-</p>
-
-<p>
-There were some higher level tools, but for some operations
+At least with this tool, we don't have to edit XML.  However, it is
+still necessary to provide a cumbersome URL.
 </p>
 
 </aside>
 
-
 </section>
 </section>
 <section>
-<section id="slide-orgheadline8">
-<h2 id="orgheadline8">Dractor</h2>
+<section id="slide-org2ee64d7">
+<h2 id="org2ee64d7">Dractor</h2>
 <div class="org-src-container">
 
-<pre  class="src src-python">from dractor.dcim import Client
+<pre><code class="python" >from dractor.dcim import Client
 client = Client('192.168.0.120', 443, 'root', 'calvin')
 client.connect()
 client.DCIM_ComputerSystem.RequestStateChange(RequestedState='Enabled')
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
@@ -267,8 +260,34 @@ powering on a computer becomes much more straight forward.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline9">
-<h2 id="orgheadline9">Documentation</h2>
+<section id="slide-org9e14421">
+<h2 id="org9e14421">Querying for System Information</h2>
+<div class="org-src-container">
+
+<pre><code class="python" >&gt;&gt;&gt; nic_inventory = client.DCIM_NICViewFactory.enumerate()
+
+&gt;&gt;&gt; nic_inventory.keys()
+dict_keys(['NIC.Embedded.1-1-1', 'NIC.Embedded.2-1-1'])
+
+&gt;&gt;&gt; print(nic_inventory['NIC.Embedded.1-1-1'].ProductName)
+Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
+
+</code></pre>
+</div>
+
+<aside class="notes">
+<p>
+Here we are getting information on what type of NIC the first NIC in
+the system is.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-org9a249f4">
+<h2 id="org9a249f4">Documentation</h2>
 
 <div class="figure">
 <p><img src="./images/code_documentation.png" alt="code_documentation.png" />
@@ -285,33 +304,8 @@ With Dractor, we make the documentation available.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline10">
-<h2 id="orgheadline10">Querying for System Information</h2>
-<div class="org-src-container">
-
-<pre  class="src src-python">&gt;&gt;&gt; nic_inventory = client.DCIM_NICViewFactory.enumerate()
-
-&gt;&gt;&gt; nic_inventory.keys()
-dict_keys(['NIC.Embedded.1-1-1', 'NIC.Embedded.2-1-1'])
-
-&gt;&gt;&gt; print(nic_inventory['NIC.Embedded.1-1-1'].ProductName)
-Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
-</pre>
-</div>
-
-<aside class="notes">
-<p>
-Here we are getting information on what type of NIC the first NIC in
-the system is.
-</p>
-
-</aside>
-
-</section>
-</section>
-<section>
-<section id="slide-orgheadline11">
-<h2 id="orgheadline11">Return Data Attributes</h2>
+<section id="slide-org8edb5a6">
+<h2 id="org8edb5a6">Return Data Attributes</h2>
 
 <div class="figure">
 <p><img src="./images/nic_inventory.png" alt="nic_inventory.png" />
@@ -328,11 +322,11 @@ We get a ton of information back from the DRAC.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline12">
-<h2 id="orgheadline12">Return Data Docstrings</h2>
+<section id="slide-org9de74a3">
+<h2 id="org9de74a3">Return Data Docstrings</h2>
 <div class="org-src-container">
 
-<pre  class="src src-text">Help on DCIM_NICView in module dractor.dcim.v2303030.DCIM_NICView object:
+<pre><code class="text" >Help on DCIM_NICView in module dractor.dcim.v2303030.DCIM_NICView object:
 
 class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
  |  DCIM_NICView is a derivation of DCIM_View
@@ -379,17 +373,17 @@ class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
  |
  |  FCoEWWNN
  |      Fiber Channel over Ethernet World Wide Node Name.
-</pre>
+</code></pre>
 </div>
 
 </section>
 </section>
 <section>
-<section id="slide-orgheadline13">
-<h2 id="orgheadline13">Exceptions</h2>
+<section id="slide-orgf7c4df1">
+<h2 id="orgf7c4df1">Exceptions</h2>
 <div class="org-src-container">
 
-<pre  class="src src-python">ERROR:dractor.dcim.base:Expected ['0', '4096'], got 2: SYS021: The command failed to set RequestedState
+<pre><code class="python" >ERROR:dractor.dcim.base:Expected ['0', '4096'], got 2: SYS021: The command failed to set RequestedState
 Traceback (most recent call last):
   File "./d.py", line 10, in &lt;module&gt;
     client.DCIM_ComputerSystem.RequestStateChange(RequestedState="Enabled")
@@ -400,7 +394,7 @@ Traceback (most recent call last):
   File "/home/omen/Software/Personal/dractor/dractor/dcim/base.py", line 261, in _assert_return_value
     raise DCIMCommandError(return_value, message_id, message)
 dractor.exceptions.DCIMCommandError: ('2', 'SYS021', 'The command failed to set RequestedState')
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
@@ -413,8 +407,8 @@ Powering on a server that is already powered on.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline14">
-<h2 id="orgheadline14">Dractor Recipes</h2>
+<section id="slide-orgcc8c77e">
+<h2 id="orgcc8c77e">Dractor Recipes</h2>
 <ul>
 <li>Recipes are high level examples of dractor usage</li>
 
@@ -436,8 +430,8 @@ issue or if it is stuck at a BIOS prompt.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline15">
-<h2 id="orgheadline15">Dractor: Implementation Details</h2>
+<section id="slide-org4c94f64">
+<h2 id="org4c94f64">Dractor: Implementation Details</h2>
 
 <div class="figure">
 <p><img src="./images/delorean.jpg" alt="delorean.jpg" />
@@ -454,11 +448,11 @@ None of these doc strings or attributes were manually typed in.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline16">
-<h2 id="orgheadline16">Managed Object Format</h2>
+<section id="slide-org15d7f48">
+<h2 id="org15d7f48">Managed Object Format</h2>
 <div class="org-src-container">
 
-<pre  class="src src-c">    [Description(
+<pre><code class="c" >    [Description(
         "") ]
 class DCIM_ComputerSystem : CIM_ComputerSystem {
 
@@ -504,14 +498,24 @@ class DCIM_ComputerSystem : CIM_ComputerSystem {
         string MessageArguments[]
     );
 };
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
 <p>
 Dell provides a set of Managed Object Format files (MOF) with
-every DRAC relase.  These MOF files provide us with enough information
-to automatically construct an interface to the Lifecycle Controller
+every DRAC relase.
+</p>
+
+<p>
+These MOF files define the methods supported by the Lifecycle
+controller API as well as "objects" returned when querying the
+LC API for information about the server.
+</p>
+
+<p>
+Notice that the MOF files provide a lot of metadata about the
+API, including our doc strings.
 </p>
 
 </aside>
@@ -519,11 +523,11 @@ to automatically construct an interface to the Lifecycle Controller
 </section>
 </section>
 <section>
-<section id="slide-orgheadline17">
-<h2 id="orgheadline17">Handling MOF files</h2>
+<section id="slide-orgaaf1fcc">
+<h2 id="orgaaf1fcc">Handling MOF files</h2>
 <div class="org-src-container">
 
-<pre  class="src src-c">// DCIM MOF parsing
+<pre><code class="c" >// DCIM MOF parsing
 root:
     MOFClass
 ;
@@ -578,13 +582,14 @@ Keyword:
 Comment:
   /\/\/.*$/
 ;
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
 <p>
-It turns out that writing a grammar to parse MOF files is not terrible.
-We a tool called textX to do the parsing.
+It turns out that writing a grammar to parse MOF files is not too terrible.
+We a tool called textX to do the parsing.  The documentation and tutorials that
+come with textX made it easy to get started.
 </p>
 
 </aside>
@@ -592,38 +597,44 @@ We a tool called textX to do the parsing.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline18">
-<h2 id="orgheadline18">Metamodel</h2>
+<section id="slide-orgc5fb302">
+<h2 id="orgc5fb302">Metamodel</h2>
 <div class="org-src-container">
 
-<pre  class="src src-python">class MOFClass(Qualified):
+<pre><code class="python" >class MOFClass(Qualified):
     """ MOF Class """
 
     def __init__(self, name, qualifiers, parent_class, members):
         """
-        Our MOF classes consist of members, which are functions, and
-        qualifiers
+        Our MOF classes consist of members, which are functions, and qualifiers
         """
-
         self.parent_class = parent_class
         self.members = members
-
         super(MOFClass, self).__init__(name, qualifiers)
-</pre>
+
+    @property
+    def name(self):
+        """ Return the Pythonic Name """
+        return self._name.replace("[]", "")
+</code></pre>
 </div>
 
 <aside class="notes">
 <p>
 We use some custom metamodel classes with textX.  Basically, textX will
-use these classes to instantiate, if defined, the objects in the grammar.
-For example here, you can compare MOFClass with the MOFClass in the grammar
-in the slide before.
+use these classes when instantiating the Abstract Syntax tree.
 </p>
 
 <p>
-They contain the primary MOF to Python logic.  These classes expose properties
-that massage the information from the parsed MOF file in a way that makes
-writing templates easy.
+MOFClass with the MOFClass in the grammar in the slide before maps to the
+MOFClass in this slide.
+</p>
+
+<p>
+We use these objects to define custom properties that take the raw data
+from the syntax tree and return it in a way that enables easy automatic
+code generations. For example, MOF files sometimes contain names with
+a '[]'.  We strip that out at this level.
 </p>
 
 </aside>
@@ -631,11 +642,11 @@ writing templates easy.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline19">
-<h2 id="orgheadline19">Templates</h2>
+<section id="slide-org2a1c1e2">
+<h2 id="org2a1c1e2">Templates</h2>
 <div class="org-src-container">
 
-<pre  class="src src-jinja2"># pylint: disable=no-name-in-module
+<pre><code class="jinja2" ># pylint: disable=no-name-in-module
 from dractor.dcim.base import {{  mof_class.dcim_parents|join(", ") }}
 {% if mof_class.attributes %}
 from dractor.dcim.base import DCIMFactory
@@ -647,7 +658,7 @@ class {{ mof_class.name }}({{ mof_class.dcim_parents|join(", ") }}):
     """
 
     .....
-</pre>
+</code></pre>
 </div>
 
 <aside class="notes">
@@ -667,11 +678,11 @@ write it out as Python code.
 </section>
 </section>
 <section>
-<section id="slide-orgheadline20">
-<h2 id="orgheadline20">Auto-generated code</h2>
+<section id="slide-org7be0079">
+<h2 id="org7be0079">Auto-generated code</h2>
 <div class="org-src-container">
 
-<pre  class="src src-python">from dractor.dcim.base import DCIMMethodObject
+<pre><code class="python" >from dractor.dcim.base import DCIMMethodObject
 
 class DCIM_ComputerSystem(DCIMMethodObject):
     """
@@ -790,14 +801,23 @@ class DCIM_ComputerSystem(DCIMMethodObject):
         parameters['output']['ReturnValue']['valuemap'] = {}
 
         return self._invoke_method("RequestStateChange", parameters)
-</pre>
+</code></pre>
 </div>
 
 </section>
 </section>
 <section>
-<section id="slide-orgheadline21">
-<h2 id="orgheadline21">Conclusion</h2>
+<section id="slide-org4caee63">
+<h2 id="org4caee63">Demo</h2>
+<p>
+<a href="https://daedalian.us/~omen/dractor_skill.mp4">Dractor Alexa Skill</a>
+</p>
+
+</section>
+</section>
+<section>
+<section id="slide-orge4ce4da">
+<h2 id="orge4ce4da">Conclusion</h2>
 <ul>
 <li>The object style API interface of the Lifecycle controller made it a natural fit for Python</li>
 
@@ -810,8 +830,8 @@ class DCIM_ComputerSystem(DCIMMethodObject):
 </section>
 </section>
 <section>
-<section id="slide-orgheadline22">
-<h2 id="orgheadline22">Links</h2>
+<section id="slide-org45786e5">
+<h2 id="org45786e5">Links</h2>
 <p>
 <a href="https://github.com/VerizonDigital/dractor">https://github.com/VerizonDigital/dractor</a>
 </p>
@@ -839,8 +859,11 @@ slideNumber: 'c',
 rollingLinks: false,
 keyboard: true,
 overview: true,
-width: 1200,
+width: 1280,
 height: 800,
+margin: 0.10,
+minScale: 0.25,
+maxScale: 1.00,
 
 theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
 transition: Reveal.getQueryHash().transition || 'linear', // default/cube/page/concave/zoom/linear/fade/none
@@ -853,11 +876,7 @@ multiplex: {
 
 // Optional libraries used to extend on reveal.js
 dependencies: [
- { src: './reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
- { src: './reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
- { src: './reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
- { src: './reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
- { src: './reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }]
+ { src: './reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }]
 });
 </script>
 </body>

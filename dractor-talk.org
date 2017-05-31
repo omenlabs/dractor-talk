@@ -1,9 +1,12 @@
-#+REVEAL_THEME: night
 #+REVEAL_ROOT: ./reveal.js
 #+REVEAL_TRANS: linear
 #+REVEAL_EXTRA_CSS: ./local.css
 #+OPTIONS: toc:nil num:nil
-#+OPTIONS: reveal_width:1200 reveal_height:800
+#+OPTIONS: reveal_width:1280 reveal_height:800
+#+REVEAL_MIN_SCALE: .25
+#+REVEAL_MAX_SCALE: 1
+#+REVEAL_MARGIN: .1
+#+REVEAL_PLUGINS: (highlight)
 
 #+TITLE: Charming the Dell Lifecycle Controller with Python
 #+AUTHOR: John Hickey
@@ -70,8 +73,8 @@ A service that runs on top of the iDRAC hardware
 #+END_NOTES
 
 * Lifecycle Controller API
-Powering on a server
-#+BEGIN_SRC xml
+
+#+BEGIN_SRC html
 <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
             xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
             xmlns:wsman="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd">
@@ -135,18 +138,18 @@ wsman invoke -a "RequestStateChange" http://schemas.dell.com/wbem/wscim
 #+END_SRC
 
 #+BEGIN_NOTES
-This is requesting a server to power on.
-
-There were some higher level tools, but for some operations
+At least with this tool, we don't have to edit XML.  However, it is
+still necessary to provide a cumbersome URL.
 #+END_NOTES
-
 
 * Dractor
 
 #+BEGIN_SRC python
 from dractor.dcim import Client
+
 client = Client('192.168.0.120', 443, 'root', 'calvin')
 client.connect()
+
 client.DCIM_ComputerSystem.RequestStateChange(RequestedState='Enabled')
 #+END_SRC
 
@@ -180,14 +183,18 @@ Broadcom Gigabit Ethernet BCM5720 - F4:8E:38:FF:C9:63
 #+BEGIN_NOTES
 Here we are getting information on what type of NIC the first NIC in
 the system is.
+
+The 'enumerate' call is a WSMan-ism for returning all objects of a
+particular type.  Dractor returns a dictionary of objects.
 #+END_NOTES
 
-* Return Data Attributes
+* Return Data Properties
 
 [[./images/nic_inventory.png]]
 
 #+BEGIN_NOTES
-We get a ton of information back from the DRAC.
+We get a ton of information back from the DRAC.  Dractor presents all
+the known fields as properties.
 #+END_NOTES
 
 * Return Data Docstrings
@@ -242,6 +249,11 @@ class DCIM_NICView(dractor.dcim.base.DCIMAttributeObject)
  |      Fiber Channel over Ethernet World Wide Node Name.
 #+END_SRC
 
+#+BEGIN_NOTES
+We have a rich set of doc strings for the various return properties.
+Here is the help for the DCIM_NICView object.
+#+END_NOTES
+
 * Exceptions
 
 #+BEGIN_SRC python
@@ -262,11 +274,9 @@ dractor.exceptions.DCIMCommandError: ('2', 'SYS021', 'The command failed to set 
 Powering on a server that is already powered on.
 #+END_NOTES
 
-* Dractor Recipes
+* Dractor Recipes are high level examples of dractor usage
 
- * Recipes are high level examples of dractor usage
-
- * Smart configuration decisions in software
+ * Smart configuration decisions in software for BIOS and RAID
 
  * Server error detection and handling
 
@@ -337,8 +347,14 @@ class DCIM_ComputerSystem : CIM_ComputerSystem {
 
 #+BEGIN_NOTES
 Dell provides a set of Managed Object Format files (MOF) with
-every DRAC relase.  These MOF files provide us with enough information
-to automatically construct an interface to the Lifecycle Controller
+every DRAC relase.
+
+These MOF files define the methods supported by the Lifecycle
+controller API as well as "objects" returned when querying the
+LC API for information about the server.
+
+Notice that the MOF files provide a lot of metadata about the
+API, including our doc strings.
 #+END_NOTES
 
 * Handling MOF files
@@ -402,8 +418,9 @@ Comment:
 #+END_SRC
 
 #+BEGIN_NOTES
-It turns out that writing a grammar to parse MOF files is not terrible.
-We a tool called textX to do the parsing.
+It turns out that writing a grammar to parse MOF files is not too terrible.
+We a tool called textX to do the parsing.  The documentation and tutorials that
+come with textX made it easy to get started.
 #+END_NOTES
 
 * Metamodel
@@ -414,25 +431,29 @@ class MOFClass(Qualified):
 
     def __init__(self, name, qualifiers, parent_class, members):
         """
-        Our MOF classes consist of members, which are functions, and
-        qualifiers
+        Our MOF classes consist of members, which are functions, and qualifiers
         """
-
         self.parent_class = parent_class
         self.members = members
-
         super(MOFClass, self).__init__(name, qualifiers)
+
+    @property
+    def name(self):
+        """ Return the Pythonic Name """
+        return self._name.replace("[]", "")
 #+END_SRC
 
 #+BEGIN_NOTES
 We use some custom metamodel classes with textX.  Basically, textX will
-use these classes to instantiate, if defined, the objects in the grammar.
-For example here, you can compare MOFClass with the MOFClass in the grammar
-in the slide before.
+use these classes when instantiating the Abstract Syntax tree.
 
-They contain the primary MOF to Python logic.  These classes expose properties
-that massage the information from the parsed MOF file in a way that makes
-writing templates easy.
+MOFClass with the MOFClass in the grammar in the slide before maps to the
+MOFClass in this slide.
+
+We use these objects to define custom properties that take the raw data
+from the syntax tree and return it in a way that enables easy automatic
+code generations. For example, MOF files sometimes contain names with
+a '[]'.  We strip that out at this level.
 #+END_NOTES
 
 * Templates
@@ -585,6 +606,10 @@ class DCIM_ComputerSystem(DCIMMethodObject):
         return self._invoke_method("RequestStateChange", parameters)
 #+END_SRC
 
+* Demo
+
+[[https://daedalian.us/~omen/dractor_skill.mp4][Dractor Alexa Skill]]
+
 * Conclusion
 
  * The object style API interface of the Lifecycle controller made it a natural fit for Python
@@ -595,6 +620,8 @@ class DCIM_ComputerSystem(DCIMMethodObject):
 
 * Links
 
-[[https://github.com/VerizonDigital/dractor]]
+[[https://github.com/VerizonDigital/dractor][Dractor on GitHub]]
 
 [[https://github.com/igordejanovic/textX][textX meta-language]]
+
+[[Https://github.com/omenlabs/dractor-alexa-skill][Dractor Alexa Skill]]

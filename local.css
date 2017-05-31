@@ -6,3 +6,7 @@ From https://github.com/yjwen/org-reveal/issues/177
     overflow:auto;
     height:700px;
 }
+
+.reveal pre code {
+  max-height: 650px;
+}
